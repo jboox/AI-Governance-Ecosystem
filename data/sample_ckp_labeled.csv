@@ -1,0 +1,51 @@
+entry_id,pegawai_id,tanggal,unit,uraian_teks,target,realisasi,REL,DMP,BKT,JLS,KPT,WQI
+E001,P001,2025-01-13,Bagian Umum,Mengembangkan dashboard realisasi anggaran menghasilkan 2 indikator baru,1,4,4,2,3,5,3,60
+E002,P002,2025-01-14,Subbagian Keuangan,Memverifikasi draft SOP layanan baseline 2024 tercapai,1,5,2,3,5,4,4,65
+E003,P003,2025-01-15,Subbagian Keuangan,Memverifikasi laporan kinerja triwulan akurasi 98%,2,1,3,2,2,3,4,45
+E004,P004,2025-01-16,Bagian Perencanaan,Mengolah surat tugas dinas menghasilkan 2 indikator baru,4,5,4,4,3,3,4,65
+E005,P005,2025-01-17,Bidang Statistik,Menyediakan surat tugas dinas akurasi 98%,4,3,4,3,3,3,5,65
+E006,P006,2025-01-18,Bidang SDM,Menganalisis draft SOP layanan validasi atasan,5,3,3,3,1,4,4,50
+E007,P007,2025-01-19,Bidang SDM,Mengembangkan surat tugas dinas tercapai 110% target,3,5,2,2,3,4,2,40
+E008,P008,2025-01-20,Inspektorat,Menyediakan notulen rapat koordinasi validasi atasan,3,2,2,3,2,3,2,35
+E009,P009,2025-01-21,Bagian Umum,Mengolah bahan presentasi pimpinan,4,5,4,3,3,3,3,55
+E010,P010,2025-01-22,Bidang Statistik,Menyelesaikan bahan presentasi pimpinan baseline 2024 tercapai,4,5,5,3,2,3,3,55
+E011,P011,2025-01-23,Bidang Statistik,Merekap notulen rapat koordinasi baseline 2024 tercapai,5,1,4,4,3,3,5,70
+E012,P012,2025-01-24,Bagian Umum,Menyediakan bahan presentasi pimpinan menghasilkan 2 indikator baru,1,3,4,3,2,5,3,60
+E013,P013,2025-01-25,Bagian Perencanaan,Menyusun draft SOP layanan menghasilkan 2 indikator baru,3,3,5,4,2,3,3,60
+E014,P014,2025-01-26,Bagian Perencanaan,Mengembangkan berita acara kegiatan tercapai 110% target,3,3,5,3,3,2,3,55
+E015,P015,2025-01-27,Bidang SDM,Menyediakan dashboard realisasi anggaran validasi atasan,1,3,3,3,1,3,5,50
+E016,P001,2025-01-28,Bidang Statistik,Mengembangkan dashboard realisasi anggaran,2,2,4,4,3,3,4,65
+E017,P002,2025-01-29,Subbagian Keuangan,Memverifikasi data survei kepuasan validasi atasan,5,3,4,5,4,3,3,70
+E018,P003,2025-01-30,Bidang Statistik,Menyediakan surat tugas dinas menghasilkan 2 indikator baru,1,4,3,3,3,4,5,65
+E019,P004,2025-01-31,Inspektorat,Mengembangkan draft SOP layanan baseline 2024 tercapai,3,1,4,4,3,3,4,65
+E020,P005,2025-02-01,Bagian Umum,Memverifikasi berita acara kegiatan,4,2,2,3,5,2,4,55
+E021,P006,2025-01-13,Subbagian Keuangan,Menyediakan surat tugas dinas akurasi 98%,2,4,2,4,4,3,4,60
+E022,P007,2025-01-14,Bagian Perencanaan,Mengolah data survei kepuasan link drive internal,1,3,4,4,3,3,4,65
+E023,P008,2025-01-15,Bidang SDM,Menyediakan bahan presentasi pimpinan akurasi 98%,2,2,4,2,3,3,2,45
+E024,P009,2025-01-16,Bidang SDM,Merekap berita acara kegiatan,1,5,4,3,3,4,4,65
+E025,P010,2025-01-17,Subbagian Keuangan,Menyusun data survei kepuasan menghasilkan 2 indikator baru,5,5,4,3,4,5,3,70
+E026,P011,2025-01-18,Bagian Umum,Mengolah notulen rapat koordinasi tercapai 110% target,5,2,4,3,3,4,5,70
+E027,P012,2025-01-19,Bagian Umum,Menyediakan dashboard realisasi anggaran tercapai 110% target,1,2,3,4,3,3,3,55
+E028,P013,2025-01-20,Bidang Statistik,Mengembangkan dashboard realisasi anggaran,2,2,5,3,5,3,3,70
+E029,P014,2025-01-21,Bidang Statistik,Memverifikasi bahan presentasi pimpinan validasi atasan,1,4,3,4,1,4,3,50
+E030,P015,2025-01-22,Bidang SDM,Mengembangkan notulen rapat koordinasi,3,1,3,5,3,4,2,60
+E031,P001,2025-01-23,Subbagian Keuangan,Merekap notulen rapat koordinasi,5,5,4,4,5,3,4,75
+E032,P002,2025-01-24,Bagian Perencanaan,Menyediakan surat tugas dinas akurasi 98%,1,5,3,2,5,4,4,65
+E033,P003,2025-01-25,Bidang Statistik,Mengolah draft SOP layanan,2,1,4,3,3,5,3,65
+E034,P004,2025-01-26,Subbagian Keuangan,Mengolah draft SOP layanan akurasi 98%,5,2,3,3,3,4,3,55
+E035,P005,2025-01-27,Bagian Perencanaan,Menyelesaikan surat tugas dinas,2,4,2,2,3,5,4,55
+E036,P006,2025-01-28,Inspektorat,Menganalisis bahan presentasi pimpinan baseline 2024 tercapai,2,4,5,3,3,3,3,60
+E037,P007,2025-01-29,Subbagian Keuangan,Mengembangkan laporan kinerja triwulan link drive internal,3,5,3,2,4,3,4,55
+E038,P008,2025-01-30,Bagian Perencanaan,Mengolah notulen rapat koordinasi akurasi 98%,3,2,3,2,3,3,5,55
+E039,P009,2025-01-31,Subbagian Keuangan,Menyusun notulen rapat koordinasi (terlampir 3 berkas),1,1,3,2,3,4,3,50
+E040,P010,2025-02-01,Subbagian Keuangan,Menyelesaikan draft SOP layanan (terlampir 3 berkas),2,5,3,3,4,2,5,60
+E041,P011,2025-01-13,Inspektorat,Memverifikasi surat tugas dinas,5,4,3,4,4,2,4,60
+E042,P012,2025-01-14,Inspektorat,Merekap laporan kinerja triwulan waktu proses turun 25%,4,5,2,2,4,5,3,55
+E043,P013,2025-01-15,Inspektorat,Menyusun laporan kinerja triwulan waktu proses turun 25%,5,1,4,2,4,4,4,65
+E044,P014,2025-01-16,Bidang Statistik,Menganalisis berita acara kegiatan,4,4,4,3,4,3,4,65
+E045,P015,2025-01-17,Bagian Umum,Memverifikasi draft SOP layanan,3,3,3,2,4,3,4,55
+E046,P001,2025-01-18,Bagian Perencanaan,Menyelesaikan dashboard realisasi anggaran tercapai 110% target,5,3,3,4,4,4,3,65
+E047,P002,2025-01-19,Bagian Umum,Menyediakan berita acara kegiatan,3,4,5,3,3,2,3,55
+E048,P003,2025-01-20,Bidang Statistik,Menganalisis berita acara kegiatan waktu proses turun 25%,5,5,2,2,4,3,3,45
+E049,P004,2025-01-21,Inspektorat,Menyelesaikan draft SOP layanan tercapai 110% target,4,4,5,3,1,2,3,45
+E050,P005,2025-01-22,Bagian Umum,Menyelesaikan dashboard realisasi anggaran validasi atasan,2,1,3,3,3,3,3,50

@@ -1,0 +1,1 @@
+# Rubrik Penilaian CKP – gunakan untuk labeling manual (lihat proposal).
