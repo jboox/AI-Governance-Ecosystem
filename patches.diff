@@ -1,0 +1,255 @@
+diff --git a/backend/main.py b/backend/main.py
+index 0000000..1111111 100644
+--- a/backend/main.py
++++ b/backend/main.py
+@@ -1,18 +1,24 @@
+-from fastapi import FastAPI, UploadFile, File
++from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Depends
+ from pydantic import BaseModel
+ from typing import List, Optional, Dict
+ from datetime import datetime
+-import re, os
++import re, os, hashlib, pathlib
+ 
+ app = FastAPI(title="AI Governance – MVP API", version="0.3.0")
+ 
+ class CKPItem(BaseModel):
+     entry_id: str
+     uraian_teks: str
+     target: Optional[float] = None
+     realisasi: Optional[float] = None
+ 
+ class ScoreResponse(BaseModel):
+     entry_id: str
+     work_quality: int
+     relevance: int
+     impact: int
+     evidence: int
+     clarity: int
+     compliance: int
+     wqi: int
++    model_version: str
+@@
+ # NLP model bundle
+ _model_bundle = None
+@@
+ def score_with_model(text: str, target=None, realisasi=None):
+@@
+     return rel, dmp, bkt, jls, kpt, wqi
+ 
++# ===== Admin Auth & Upload Guards =====
++API_TOKEN = os.getenv("ADMIN_API_TOKEN", "")
++MAX_BYTES = 25 * 1024 * 1024  # 25MB
++ALLOWED_EXT = {"joblib"}
++
++def require_admin(x_token: str = Header(default="")):
++    if not API_TOKEN or x_token != API_TOKEN:
++        raise HTTPException(status_code=401, detail="Unauthorized")
++
+ @app.get("/health")
+ def health():
+-    return {"status":"ok","time": datetime.utcnow().isoformat(), "nlp_model_loaded": _model_bundle is not None, "talent_model_loaded": _talent_model_bundle is not None}
++    nlp_cur = os.path.join(os.path.dirname(__file__), "models", "nlp", "current")
++    tl_cur = os.path.join(os.path.dirname(__file__), "models", "talent", "current")
++    def _ver(path):
++        try:
++            return os.path.basename(os.path.realpath(path))
++        except Exception:
++            return "unversioned"
++    return {
++        "status": "ok",
++        "time": datetime.utcnow().isoformat(),
++        "nlp_model_loaded": _model_bundle is not None,
++        "talent_model_loaded": _talent_model_bundle is not None,
++        "nlp_model_version": _ver(nlp_cur) if _model_bundle is not None else None,
++        "talent_model_version": _ver(tl_cur) if _talent_model_bundle is not None else None,
++    }
+@@
+ def score_ckp(items: List[CKPItem]):
+     results = []
++    nlp_cur = os.path.join(os.path.dirname(__file__), "models", "nlp", "current")
++    try:
++        model_version = os.path.basename(os.path.realpath(nlp_cur)) if _model_bundle is not None else "heuristic"
++    except Exception:
++        model_version = "heuristic"
+     for it in items:
+         rel,dmp,bkt,jls,kpt,wqi = score_with_model(it.uraian_teks, it.target, it.realisasi)
+         results.append(ScoreResponse(
+             entry_id=it.entry_id,
+             work_quality=wqi,
+             relevance=rel,
+             impact=dmp,
+             evidence=bkt,
+             clarity:jls,
+             compliance:kpt,
+-            wqi:wqi
++            wqi:wqi,
++            model_version:model_version
+         ))
+     return results
+ 
+-@app.post("/admin/upload-model")
+-async def upload_model(file: UploadFile = File(...)):
+-    content = await file.read()
+-    model_dir = os.path.join(os.path.dirname(__file__), "models")
+-    os.makedirs(model_dir, exist_ok=True)
+-    out_path = os.path.join(model_dir, "nlp_wqi_baseline.joblib")
+-    with open(out_path, "wb") as f:
+-        f.write(content)
+-    global _model_bundle
+-    try:
+-        import joblib
+-        _model_bundle = joblib.load(out_path)
+-        loaded = True
+-    except Exception:
+-        loaded = False
+-    return {"uploaded": True, "model_loaded": loaded, "path": out_path}
++@app.post("/admin/upload-model")
++async def upload_model(file: UploadFile = File(...), _: None = Depends(require_admin)):
++    ext = (file.filename.split(".")[-1] or "").lower()
++    if ext not in ALLOWED_EXT:
++        raise HTTPException(status_code=400, detail="Invalid extension")
++    content = await file.read()
++    if len(content) > MAX_BYTES:
++        raise HTTPException(status_code=413, detail="File too large")
++    model_root = os.path.join(os.path.dirname(__file__), "models", "nlp")
++    os.makedirs(model_root, exist_ok=True)
++    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
++    sha = hashlib.sha256(content).hexdigest()[:8]
++    dst_dir = os.path.join(model_root, f"{ts}_{sha}")
++    pathlib.Path(dst_dir).mkdir(parents=True, exist_ok=True)
++    out_path = os.path.join(dst_dir, "nlp_wqi_baseline.joblib")
++    with open(out_path, "wb") as f:
++        f.write(content)
++    cur = os.path.join(model_root, "current")
++    try:
++        if os.path.islink(cur) or os.path.exists(cur):
++            os.remove(cur)
++        os.symlink(dst_dir, cur)
++    except Exception:
++        pass
++    global _model_bundle
++    try:
++        import joblib
++        _model_bundle = joblib.load(out_path)
++        loaded = True
++    except Exception:
++        loaded = False
++    return {"uploaded": True, "model_loaded": loaded, "path": out_path, "version": os.path.basename(dst_dir)}
+@@
+ class TalentResponse(BaseModel):
+     pegawai_id: str
+     talent_score: int
+     band: str
+     top_factors: Dict[str, float] = {}
++    model_version: Optional[str] = None
+@@
+-@app.post("/admin/upload-talent-model")
+-async def upload_talent_model(file: UploadFile = File(...)):
+-    content = await file.read()
+-    model_dir = os.path.join(os.path.dirname(__file__), "models")
+-    os.makedirs(model_dir, exist_ok=True)
+-    out_path = os.path.join(model_dir, "talent_xgb.joblib")
+-    with open(out_path, "wb") as f:
+-        f.write(content)
+-    global _talent_model_bundle
+-    try:
+-        import joblib as _jb
+-        _talent_model_bundle = _jb.load(out_path)
+-        loaded = True
+-        metrics = _talent_model_bundle.get('metrics', {})
+-    except Exception:
+-        loaded = False
+-        metrics = {}
+-    return {"uploaded": True, "model_loaded": loaded, "path": out_path, "metrics": metrics}
++@app.post("/admin/upload-talent-model")
++async def upload_talent_model(file: UploadFile = File(...), _: None = Depends(require_admin)):
++    ext = (file.filename.split(".")[-1] or "").lower()
++    if ext not in ALLOWED_EXT:
++        raise HTTPException(status_code=400, detail="Invalid extension")
++    content = await file.read()
++    if len(content) > MAX_BYTES:
++        raise HTTPException(status_code=413, detail="File too large")
++    model_root = os.path.join(os.path.dirname(__file__), "models", "talent")
++    os.makedirs(model_root, exist_ok=True)
++    ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
++    sha = hashlib.sha256(content).hexdigest()[:8]
++    dst_dir = os.path.join(model_root, f"{ts}_{sha}")
++    pathlib.Path(dst_dir).mkdir(parents=True, exist_ok=True)
++    out_path = os.path.join(dst_dir, "talent_xgb.joblib")
++    with open(out_path, "wb") as f:
++        f.write(content)
++    cur = os.path.join(model_root, "current")
++    try:
++        if os.path.islink(cur) or os.path.exists(cur):
++            os.remove(cur)
++        os.symlink(dst_dir, cur)
++    except Exception:
++        pass
++    global _talent_model_bundle
++    try:
++        import joblib as _jb
++        _talent_model_bundle = _jb.load(out_path)
++        loaded = True
++        metrics = _talent_model_bundle.get('metrics', {})
++    except Exception:
++        loaded = False
++        metrics = {}
++    return {"uploaded": True, "model_loaded": loaded, "path": out_path, "version": os.path.basename(dst_dir), "metrics": metrics}
+@@
+-        # --- Plot Matplotlib ---
+-        import matplotlib.pyplot as plt
+-        fig = plt.figure()
+-        plt.scatter(fdf[x_feature], fdf["talent_score"])
+-        plt.xlabel(x_feature)
+-        plt.ylabel("Talent Score")
+-        plt.title(f"Talent Map (Matplotlib) – {x_feature} vs Talent Score")
+-        st.pyplot(fig)
+-
+-
+-        # Plot Matplotlib (tanpa style khusus, sesuai aturan)
+-        fig = plt.figure()
+-        plt.scatter(fdf[x_feature], fdf["talent_score"])
+-        plt.xlabel(x_feature)
+-        plt.ylabel("Talent Score")
+-        plt.title(f"Talent Map (Matplotlib) – {x_feature} vs Talent Score")
+-        st.pyplot(fig)
++        # --- Plot Matplotlib (satu kali, tanpa style khusus) ---
++        fig = plt.figure()
++        plt.scatter(fdf[x_feature], fdf["talent_score"])
++        plt.xlabel(x_feature)
++        plt.ylabel("Talent Score")
++        plt.title(f"Talent Map (Matplotlib) – {x_feature} vs Talent Score")
++        st.pyplot(fig)
+@@
+-    if joblib_file is not None and st.button("Upload NLP Model"):
++    admin_token = st.text_input("Admin Token (X-Token)", type="password", help="Isi sesuai ADMIN_API_TOKEN backend.")
++    if joblib_file is not None and st.button("Upload NLP Model"):
+         files = {"file": (joblib_file.name, joblib_file.getvalue(), "application/octet-stream")}
+         try:
+-            res = requests.post(api_admin, files=files, timeout=30)
++            headers = {"X-Token": admin_token} if admin_token else {}
++            res = requests.post(api_admin, files=files, headers=headers, timeout=30)
+             st.json(res.json())
+             if res.status_code == 200:
+                 st.success("Model NLP berhasil diunggah ke backend.")
+             else:
+                 st.error(f"Gagal upload: {res.status_code}")
+         except Exception as e:
+             st.error(f"Error: {e}")
+@@
+-    if joblib_file2 is not None and st.button("Upload Talent Model"):
++    admin_token2 = st.text_input("Admin Token (X-Token)", type="password", key="talent_token", help="Isi sesuai ADMIN_API_TOKEN backend.")
++    if joblib_file2 is not None and st.button("Upload Talent Model"):
+         files = {"file": (joblib_file2.name, joblib_file2.getvalue(), "application/octet-stream")}
+         try:
+-            res = requests.post(api_admin2, files=files, timeout=30)
++            headers = {"X-Token": admin_token2} if admin_token2 else {}
++            res = requests.post(api_admin2, files=files, headers=headers, timeout=30)
+             st.json(res.json())
+             if res.status_code == 200:
+                 st.success("Talent model berhasil diunggah ke backend.")
+             else:
+                 st.error(f"Gagal upload: {res.status_code}")
+         except Exception as e:
+             st.error(f"Error: {e}")
