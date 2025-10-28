@@ -1,0 +1,1 @@
+Scaffold v5: backend + dashboard + loaders + graph search + matplotlib scatter.

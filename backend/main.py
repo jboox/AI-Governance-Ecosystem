@@ -1,11 +1,25 @@
 
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 from datetime import datetime
 import re, os
 
-app = FastAPI(title="AI Governance – MVP API", version="0.2.0")
+app = FastAPI(title="AI Governance – MVP API", version="0.3.0")
+
+@app.get("/")
+def index():
+    return {
+        "service": "AI Governance – MVP API",
+        "version": "0.3.0",
+        "docs": "/docs",
+        "health": "/health",
+        "endpoints": ["/nlp/score-ckp", "/ml/talent-score", "/graph/summary", "/admin/upload-model"]
+    }
+
+@app.get("/nlp/score-ckp")
+def score_ckp_help():
+    return {"usage": "Use POST with a JSON array of CKP items: [{entry_id, uraian_teks, target, realisasi}]"}
 
 class CKPItem(BaseModel):
     entry_id: str
@@ -43,13 +57,13 @@ def heuristic_score(text: str, target=None, realisasi=None):
     wqi = round((avg - 1)/4 * 100)
     return rel, dmp, bkt, jls, kpt, wqi
 
-# --- Joblib model hook (optional) ---
+# ===== NLP model (optional) =====
 _model_bundle = None
 try:
     import joblib
     model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "models", "nlp_wqi_baseline.joblib"))
     if os.path.exists(model_path):
-        _model_bundle = joblib.load(model_path)  # {'vectorizer','model','bucket_to_score'}
+        _model_bundle = joblib.load(model_path)
 except Exception:
     _model_bundle = None
 
@@ -62,7 +76,6 @@ def score_with_model(text: str, target=None, realisasi=None):
     X = vec.transform([text])
     pred_bucket = int(clf.predict(X)[0])
     wqi = int(bucket_to_score.get(pred_bucket, 50))
-    # simple proxies for sub-scores
     t = text.lower()
     rel = 2 + int(any(k in t for k in ["sasaran","target","iku","rencana"])) + int(any(k in t for k in ["laporan","kinerja","sop"]))
     dmp = 2 + int(any(k in t for k in ["efisiensi","meningkat","turun","akurat"])) + int("%" in t)
@@ -74,7 +87,7 @@ def score_with_model(text: str, target=None, realisasi=None):
 
 @app.get("/health")
 def health():
-    return {"status":"ok","time": datetime.utcnow().isoformat(), "model_loaded": _model_bundle is not None}
+    return {"status":"ok","time": datetime.utcnow().isoformat(), "nlp_model_loaded": _model_bundle is not None, "talent_model_loaded": _talent_model_bundle is not None}
 
 @app.post("/nlp/score-ckp", response_model=List[ScoreResponse])
 def score_ckp(items: List[CKPItem]):
@@ -93,7 +106,27 @@ def score_ckp(items: List[CKPItem]):
         ))
     return results
 
-# ---- Talent score stub ----
+@app.post("/admin/upload-model")
+async def upload_model(file: UploadFile = File(...)):
+    content = await file.read()
+    model_dir = os.path.join(os.path.dirname(__file__), "models")
+    os.makedirs(model_dir, exist_ok=True)
+    out_path = os.path.join(model_dir, "nlp_wqi_baseline.joblib")
+    with open(out_path, "wb") as f:
+        f.write(content)
+    global _model_bundle
+    try:
+        import joblib
+        _model_bundle = joblib.load(out_path)
+        loaded = True
+    except Exception:
+        loaded = False
+    return {"uploaded": True, "model_loaded": loaded, "path": out_path}
+
+# ===== Talent model (optional XGB) =====
+from pydantic import BaseModel
+from typing import Dict
+
 class TalentRequest(BaseModel):
     pegawai_id: str
     features: Dict[str, float] = {}
@@ -104,8 +137,50 @@ class TalentResponse(BaseModel):
     band: str
     top_factors: Dict[str, float] = {}
 
+_talent_model_bundle = None
+try:
+    import joblib as _jb
+    _talent_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "models", "talent_xgb.joblib"))
+    if os.path.exists(_talent_path):
+        _talent_model_bundle = _jb.load(_talent_path)
+except Exception:
+    _talent_model_bundle = None
+
+@app.post("/admin/upload-talent-model")
+async def upload_talent_model(file: UploadFile = File(...)):
+    content = await file.read()
+    model_dir = os.path.join(os.path.dirname(__file__), "models")
+    os.makedirs(model_dir, exist_ok=True)
+    out_path = os.path.join(model_dir, "talent_xgb.joblib")
+    with open(out_path, "wb") as f:
+        f.write(content)
+    global _talent_model_bundle
+    try:
+        import joblib as _jb
+        _talent_model_bundle = _jb.load(out_path)
+        loaded = True
+        metrics = _talent_model_bundle.get('metrics', {})
+    except Exception:
+        loaded = False
+        metrics = {}
+    return {"uploaded": True, "model_loaded": loaded, "path": out_path, "metrics": metrics}
+
 @app.post("/ml/talent-score", response_model=TalentResponse)
 def talent_score(req: TalentRequest):
+    if _talent_model_bundle is not None:
+        model = _talent_model_bundle.get('model')
+        feat_list = _talent_model_bundle.get('feature_list', [])
+        import numpy as _np
+        X = _np.array([float(req.features.get(k, 0.0)) for k in feat_list]).reshape(1, -1)
+        try:
+            prob = float(model.predict_proba(X)[0,1])
+        except Exception:
+            dv = float(model.predict(X)[0]); prob = 1.0/(1.0+_np.exp(-dv))
+        score = int(round(prob * 100))
+        band = 'High' if score>=70 else ('Medium' if score>=40 else 'Emerging')
+        return TalentResponse(pegawai_id=req.pegawai_id, talent_score=score, band=band,
+                              top_factors={k: float(req.features.get(k, 0.0)) for k in feat_list[:5]})
+    # heuristic fallback
     m = req.features.get('mean_wqi', 50.0)
     train = req.features.get('training_hours_180', 0.0)
     late = req.features.get('late_days_30', 0.0)
@@ -114,7 +189,7 @@ def talent_score(req: TalentRequest):
     return TalentResponse(pegawai_id=req.pegawai_id, talent_score=score, band=band,
                           top_factors={'mean_wqi': m, 'training_hours_180': train, 'late_days_30': late})
 
-# ---- Graph summary stub ----
+# ===== Graph summary =====
 class GraphQuery(BaseModel):
     pegawai_id: str
 
@@ -136,3 +211,4 @@ def graph_summary(q: GraphQuery):
             r = row.iloc[0]
             return GraphSummary(pegawai_id=q.pegawai_id, degree=float(r['degree']), betweenness=float(r['betweenness']), eigenvector=float(r['eigenvector']), community=int(r['community']))
     return GraphSummary(pegawai_id=q.pegawai_id, degree=0.0, betweenness=0.0, eigenvector=0.0, community=-1)
+
